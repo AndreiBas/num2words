@@ -72,6 +72,34 @@
             transform: translateY(0); /* Press down effect */
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
+        .history-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 16px;
+        }
+        .history-item {
+            background-color: #f8fafc; /* Lighter background for history items */
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 10px 16px;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            color: #4a5568;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+        .history-item .amount-num {
+            font-weight: 600;
+            color: #2d3748;
+            margin-right: 10px;
+            flex-shrink: 0; /* Prevent number from shrinking */
+        }
+        .history-item .amount-words {
+            flex-grow: 1; /* Allow words to take up available space */
+        }
     </style>
 </head>
 <body>
@@ -90,8 +118,17 @@
             </div>
         </div>
 
-        <div class="flex justify-center">
+        <div class="flex justify-center mb-8">
             <button id="copyButton" class="w-full sm:w-auto">Copy to Clipboard</button>
+        </div>
+
+        <!-- New History Section -->
+        <div class="mt-8 pt-6 border-t border-gray-200">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Conversion History</h2>
+            <ul id="historyList" class="history-list">
+                <!-- History items will be inserted here by JavaScript -->
+                <li class="text-gray-500 text-center py-4">No conversions yet.</li>
+            </ul>
         </div>
     </div>
 
@@ -100,6 +137,11 @@
             const numberInput = document.getElementById('numberInput');
             const wordsOutput = document.getElementById('wordsOutput');
             const copyButton = document.getElementById('copyButton');
+            const historyList = document.getElementById('historyList');
+
+            // Array to store conversion history (max 5 items)
+            let conversionHistory = [];
+            const MAX_HISTORY_ITEMS = 5;
 
             // Arrays for number to word conversion
             const units = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
@@ -181,7 +223,7 @@
                 if (cents < 10) {
                     return units[cents] + ' Cents';
                 } else if (cents >= 10 && cents < 20) {
-                    return teens[cents - 10] + ' Cents';
+                    return teens[cents - 10];
                 } else {
                     let centsWord = tens[Math.floor(cents / 10)];
                     if (cents % 10 > 0) {
@@ -189,6 +231,48 @@
                     }
                     return centsWord + ' Cents';
                 }
+            }
+
+            /**
+             * Adds a conversion to the history and updates the display.
+             * @param {string} numberInputVal - The numerical input string.
+             * @param {string} wordsOutputVal - The word representation string.
+             */
+            function addConversionToHistory(numberInputVal, wordsOutputVal) {
+                // Add to the beginning of the array
+                conversionHistory.unshift({
+                    number: numberInputVal,
+                    words: wordsOutputVal
+                });
+
+                // Keep only the last MAX_HISTORY_ITEMS
+                if (conversionHistory.length > MAX_HISTORY_ITEMS) {
+                    conversionHistory = conversionHistory.slice(0, MAX_HISTORY_ITEMS);
+                }
+
+                renderHistory();
+            }
+
+            /**
+             * Renders the conversion history in the UI.
+             */
+            function renderHistory() {
+                historyList.innerHTML = ''; // Clear existing history
+
+                if (conversionHistory.length === 0) {
+                    historyList.innerHTML = '<li class="text-gray-500 text-center py-4">No conversions yet.</li>';
+                    return;
+                }
+
+                conversionHistory.forEach(item => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'history-item';
+                    listItem.innerHTML = `
+                        <span class="amount-num">$${item.number}</span>
+                        <span class="amount-words">${item.words}</span>
+                    `;
+                    historyList.appendChild(listItem);
+                });
             }
 
             /**
@@ -235,7 +319,11 @@
                 }
 
                 // Add "Only" at the end for check writing convention
-                wordsOutput.textContent = result + ' Only.';
+                const finalResult = result + ' Only.';
+                wordsOutput.textContent = finalResult;
+
+                // Removed: addConversionToHistory(inputValue, finalResult);
+                // Now, history is updated only on copy button click.
             }
 
             // Event listener for input changes
@@ -244,6 +332,8 @@
             // Event listener for copy button
             copyButton.addEventListener('click', () => {
                 const textToCopy = wordsOutput.textContent;
+                const inputValue = numberInput.value.trim(); // Get current input value
+
                 if (textToCopy && textToCopy !== 'Enter a number to see its word representation.' && !textToCopy.includes('Invalid input')) {
                     // Use document.execCommand('copy') for better iframe compatibility
                     const tempTextArea = document.createElement('textarea');
@@ -252,6 +342,11 @@
                     tempTextArea.select();
                     try {
                         document.execCommand('copy');
+                        // Add to history ONLY if copy is successful and input is valid
+                        if (inputValue !== '' && !isNaN(parseFloat(inputValue)) && parseFloat(inputValue) >= 0 && parseFloat(inputValue) <= 999999999999999.99) {
+                             addConversionToHistory(inputValue, textToCopy);
+                        }
+
                         // Optional: Provide visual feedback to the user
                         const originalButtonText = copyButton.textContent;
                         copyButton.textContent = 'Copied!';
@@ -275,8 +370,8 @@
                 }
             });
 
-            // Initial update on load in case there's a pre-filled value (though unlikely for this app)
-            updateWords();
+            // Initial render of history on load (will show "No conversions yet.")
+            renderHistory();
         });
     </script>
 </body>
