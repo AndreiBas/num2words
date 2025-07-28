@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number to Words Converter</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Light blue-gray background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 32px;
+            border-radius: 16px; /* More rounded corners */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Softer shadow */
+            max-width: 600px;
+            width: 100%;
+            border: 1px solid #e2e8f0; /* Light border */
+        }
+        input[type="number"] {
+            border: 2px solid #cbd5e1; /* Slightly darker border */
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 1.125rem; /* Larger font size */
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.2s ease-in-out;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #3b82f6; /* Blue focus border */
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); /* Focus shadow */
+        }
+        .result-box {
+            background-color: #e0f2fe; /* Light blue background */
+            border: 1px solid #90cdf4; /* Blue border */
+            border-radius: 8px;
+            padding: 16px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            font-size: 1.25rem; /* Larger font size */
+            color: #1a202c; /* Dark text */
+            word-wrap: break-word; /* Ensure text wraps */
+            line-height: 1.5;
+        }
+        button {
+            background-color: #3b82f6; /* Blue button */
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: none; /* Remove default button border */
+        }
+        button:hover {
+            background-color: #2563eb; /* Darker blue on hover */
+            transform: translateY(-1px); /* Slight lift effect */
+        }
+        button:active {
+            transform: translateY(0); /* Press down effect */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Number to Words for Checks</h1>
+
+        <div class="mb-6">
+            <label for="numberInput" class="block text-gray-700 text-lg font-medium mb-2">Enter Amount:</label>
+            <input type="number" id="numberInput" placeholder="e.g., 123.45" step="0.01" min="0" class="focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-gray-700 text-lg font-medium mb-2">Amount in Words:</label>
+            <div id="wordsOutput" class="result-box">
+                Enter a number to see its word representation.
+            </div>
+        </div>
+
+        <div class="flex justify-center">
+            <button id="copyButton" class="w-full sm:w-auto">Copy to Clipboard</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const numberInput = document.getElementById('numberInput');
+            const wordsOutput = document.getElementById('wordsOutput');
+            const copyButton = document.getElementById('copyButton');
+
+            // Arrays for number to word conversion
+            const units = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+            const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+            const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+            const scales = ['', 'Thousand', 'Million', 'Billion', 'Trillion']; // Extend if needed for larger numbers
+
+            /**
+             * Converts a number less than 1000 into words.
+             * @param {number} num - The number to convert (0-999).
+             * @returns {string} The word representation of the number.
+             */
+            function convertLessThanOneThousand(num) {
+                let word = '';
+                if (num === 0) return ''; // Handle zero specifically for sub-parts
+
+                // Hundreds
+                if (Math.floor(num / 100) > 0) {
+                    word += units[Math.floor(num / 100)] + ' Hundred';
+                    num %= 100;
+                    if (num > 0) word += ' ';
+                }
+
+                // Tens and Units
+                if (num > 0) {
+                    if (num < 10) {
+                        word += units[num];
+                    } else if (num >= 10 && num < 20) {
+                        word += teens[num - 10];
+                    } else {
+                        word += tens[Math.floor(num / 10)];
+                        if (num % 10 > 0) {
+                            word += ' ' + units[num % 10];
+                        }
+                    }
+                }
+                return word.trim();
+            }
+
+            /**
+             * Converts a full number (integer part) into words.
+             * @param {number} num - The integer part of the number.
+             * @returns {string} The word representation of the integer.
+             */
+            function convertNumberToWords(num) {
+                if (num === 0) return 'Zero';
+                if (num < 0) return 'Negative ' + convertNumberToWords(Math.abs(num)); // Handle negative numbers
+
+                let words = [];
+                let i = 0;
+
+                while (num > 0) {
+                    const chunk = num % 1000;
+                    if (chunk > 0) {
+                        let chunkWords = convertLessThanOneThousand(chunk);
+                        if (scales[i]) { // Add scale (Thousand, Million, etc.)
+                            chunkWords += ' ' + scales[i];
+                        }
+                        words.unshift(chunkWords.trim()); // Add to the beginning of the array
+                    }
+                    num = Math.floor(num / 1000);
+                    i++;
+                }
+
+                return words.join(' ').trim();
+            }
+
+            /**
+             * Converts cents (decimal part) into words.
+             * @param {number} cents - The cents value (0-99).
+             * @returns {string} The word representation of the cents.
+             */
+            function convertCentsToWords(cents) {
+                if (cents === 0) {
+                    return 'Zero Cents';
+                }
+                // Ensure cents is an integer for lookup
+                cents = Math.round(cents); // Round to nearest integer for safety
+                if (cents < 10) {
+                    return units[cents] + ' Cents';
+                } else if (cents >= 10 && cents < 20) {
+                    return teens[cents - 10] + ' Cents';
+                } else {
+                    let centsWord = tens[Math.floor(cents / 10)];
+                    if (cents % 10 > 0) {
+                        centsWord += ' ' + units[cents % 10];
+                    }
+                    return centsWord + ' Cents';
+                }
+            }
+
+            /**
+             * Main function to handle input and update output.
+             */
+            function updateWords() {
+                let inputValue = numberInput.value.trim();
+                if (inputValue === '') {
+                    wordsOutput.textContent = 'Enter a number to see its word representation.';
+                    return;
+                }
+
+                // Use parseFloat to handle decimal numbers
+                let number = parseFloat(inputValue);
+
+                // Check for valid number and reasonable range
+                if (isNaN(number)) {
+                    wordsOutput.textContent = 'Invalid input. Please enter a valid number.';
+                    return;
+                }
+
+                // Limit to a reasonable range for checks (e.g., up to trillions)
+                if (number > 999999999999999.99) { // Roughly less than a quadrillion
+                    wordsOutput.textContent = 'Number is too large for conversion. Please enter a smaller amount.';
+                    return;
+                }
+                if (number < 0) {
+                    wordsOutput.textContent = 'Negative numbers are not typically used on checks. Please enter a positive amount.';
+                    return;
+                }
+
+                const integerPart = Math.floor(number);
+                // Extract cents and handle floating point precision issues
+                const centsPart = Math.round((number - integerPart) * 100);
+
+                let result = '';
+                if (integerPart === 0 && centsPart === 0) {
+                    result = 'Zero Dollars and Zero Cents';
+                } else {
+                    let dollarsInWords = convertNumberToWords(integerPart);
+                    let centsInWords = convertCentsToWords(centsPart);
+
+                    result = dollarsInWords + ' Dollars and ' + centsInWords;
+                }
+
+                // Add "Only" at the end for check writing convention
+                wordsOutput.textContent = result + ' Only.';
+            }
+
+            // Event listener for input changes
+            numberInput.addEventListener('input', updateWords);
+
+            // Event listener for copy button
+            copyButton.addEventListener('click', () => {
+                const textToCopy = wordsOutput.textContent;
+                if (textToCopy && textToCopy !== 'Enter a number to see its word representation.' && !textToCopy.includes('Invalid input')) {
+                    // Use document.execCommand('copy') for better iframe compatibility
+                    const tempTextArea = document.createElement('textarea');
+                    tempTextArea.value = textToCopy;
+                    document.body.appendChild(tempTextArea);
+                    tempTextArea.select();
+                    try {
+                        document.execCommand('copy');
+                        // Optional: Provide visual feedback to the user
+                        const originalButtonText = copyButton.textContent;
+                        copyButton.textContent = 'Copied!';
+                        setTimeout(() => {
+                            copyButton.textContent = originalButtonText;
+                        }, 1500);
+                    } catch (err) {
+                        console.error('Failed to copy text: ', err);
+                        // Fallback for browsers that don't support execCommand or when it fails
+                        alert('Copying failed. Please manually select and copy the text.');
+                    } finally {
+                        document.body.removeChild(tempTextArea);
+                    }
+                } else {
+                    // Alert the user if there's nothing valid to copy
+                    const originalButtonText = copyButton.textContent;
+                    copyButton.textContent = 'Nothing to copy!';
+                    setTimeout(() => {
+                        copyButton.textContent = originalButtonText;
+                    }, 1500);
+                }
+            });
+
+            // Initial update on load in case there's a pre-filled value (though unlikely for this app)
+            updateWords();
+        });
+    </script>
+</body>
+</html>
