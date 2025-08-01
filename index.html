@@ -53,24 +53,39 @@
             line-height: 1.5;
         }
         button {
-            background-color: #3b82f6; /* Blue button */
-            color: white;
-            padding: 12px 24px;
+            border: none; /* Remove default button border */
             border-radius: 8px;
             font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border: none; /* Remove default button border */
         }
         button:hover {
-            background-color: #2563eb; /* Darker blue on hover */
             transform: translateY(-1px); /* Slight lift effect */
         }
         button:active {
             transform: translateY(0); /* Press down effect */
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        /* Main action button style */
+        #saveButton {
+            background-color: #3b82f6; /* Blue button */
+            color: white;
+            padding: 12px 24px;
+        }
+        #saveButton:hover {
+            background-color: #2563eb; /* Darker blue on hover */
+        }
+        /* MODIFIED: Style for the Reset button (gray color) */
+        #resetButton {
+            background-color: #64748b; /* slate-500 */
+            color: white;
+            padding: 12px 16px; /* Match height of input */
+            flex-shrink: 0; /* Prevent button from shrinking */
+        }
+        #resetButton:hover {
+            background-color: #475569; /* slate-600 */
         }
         .history-list {
             list-style: none;
@@ -78,7 +93,7 @@
             margin-top: 16px;
         }
         .history-item {
-            background-color: #f8fafc; /* Lighter background for history items */
+            background-color: #f8fafc;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
             padding: 10px 16px;
@@ -95,10 +110,10 @@
             font-weight: 600;
             color: #2d3748;
             margin-right: 10px;
-            flex-shrink: 0; /* Prevent number from shrinking */
+            flex-shrink: 0;
         }
         .history-item .amount-words {
-            flex-grow: 1; /* Allow words to take up available space */
+            flex-grow: 1;
         }
     </style>
 </head>
@@ -106,9 +121,13 @@
     <div class="container">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Number to Words for Checks</h1>
 
+        <!-- MODIFIED: Input section with reset button moved -->
         <div class="mb-6">
             <label for="numberInput" class="block text-gray-700 text-lg font-medium mb-2">Enter Amount:</label>
-            <input type="number" id="numberInput" placeholder="e.g., 123.45" step="0.01" min="0" class="focus:ring-blue-500 focus:border-blue-500">
+            <div class="flex items-center gap-2">
+                <input type="number" id="numberInput" placeholder="e.g., 123.45" step="0.01" min="0" class="focus:ring-blue-500 focus:border-blue-500 flex-grow">
+                <button id="resetButton">Reset</button>
+            </div>
         </div>
 
         <div class="mb-6">
@@ -118,15 +137,15 @@
             </div>
         </div>
 
+        <!-- MODIFIED: "Save" button is now centered alone -->
         <div class="flex justify-center mb-8">
-            <button id="copyButton" class="w-full sm:w-auto">Copy to Clipboard</button>
+            <button id="saveButton" class="w-full sm:w-auto">Save</button>
         </div>
 
-        <!-- New History Section -->
+        <!-- History Section -->
         <div class="mt-8 pt-6 border-t border-gray-200">
             <h2 class="text-2xl font-bold text-gray-800 mb-4">Conversion History</h2>
             <ul id="historyList" class="history-list">
-                <!-- History items will be inserted here by JavaScript -->
                 <li class="text-gray-500 text-center py-4">No conversions yet.</li>
             </ul>
         </div>
@@ -136,36 +155,26 @@
         document.addEventListener('DOMContentLoaded', () => {
             const numberInput = document.getElementById('numberInput');
             const wordsOutput = document.getElementById('wordsOutput');
-            const copyButton = document.getElementById('copyButton');
+            const saveButton = document.getElementById('saveButton');
+            const resetButton = document.getElementById('resetButton');
             const historyList = document.getElementById('historyList');
 
-            // Array to store conversion history (max 5 items)
             let conversionHistory = [];
             const MAX_HISTORY_ITEMS = 5;
 
-            // Arrays for number to word conversion
             const units = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
             const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
             const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-            const scales = ['', 'Thousand', 'Million', 'Billion', 'Trillion']; // Extend if needed for larger numbers
+            const scales = ['', 'Thousand', 'Million', 'Billion', 'Trillion'];
 
-            /**
-             * Converts a number less than 1000 into words.
-             * @param {number} num - The number to convert (0-999).
-             * @returns {string} The word representation of the number.
-             */
             function convertLessThanOneThousand(num) {
                 let word = '';
-                if (num === 0) return ''; // Handle zero specifically for sub-parts
-
-                // Hundreds
+                if (num === 0) return '';
                 if (Math.floor(num / 100) > 0) {
                     word += units[Math.floor(num / 100)] + ' Hundred';
                     num %= 100;
                     if (num > 0) word += ' ';
                 }
-
-                // Tens and Units
                 if (num > 0) {
                     if (num < 10) {
                         word += units[num];
@@ -181,89 +190,44 @@
                 return word.trim();
             }
 
-            /**
-             * Converts a full number (integer part) into words.
-             * @param {number} num - The integer part of the number.
-             * @returns {string} The word representation of the integer.
-             */
             function convertNumberToWords(num) {
                 if (num === 0) return 'Zero';
-                if (num < 0) return 'Negative ' + convertNumberToWords(Math.abs(num)); // Handle negative numbers
-
+                if (num < 0) return 'Negative ' + convertNumberToWords(Math.abs(num));
                 let words = [];
                 let i = 0;
-
                 while (num > 0) {
                     const chunk = num % 1000;
                     if (chunk > 0) {
                         let chunkWords = convertLessThanOneThousand(chunk);
-                        if (scales[i]) { // Add scale (Thousand, Million, etc.)
+                        if (scales[i]) {
                             chunkWords += ' ' + scales[i];
                         }
-                        words.unshift(chunkWords.trim()); // Add to the beginning of the array
+                        words.unshift(chunkWords.trim());
                     }
                     num = Math.floor(num / 1000);
                     i++;
                 }
-
                 return words.join(' ').trim();
             }
 
-            /**
-             * Converts cents (decimal part) into words.
-             * @param {number} cents - The cents value (0-99).
-             * @returns {string} The word representation of the cents.
-             */
-            function convertCentsToWords(cents) {
-                if (cents === 0) {
-                    return 'Zero Cents';
-                }
-                // Ensure cents is an integer for lookup
-                cents = Math.round(cents); // Round to nearest integer for safety
-                if (cents < 10) {
-                    return units[cents] + ' Cents';
-                } else if (cents >= 10 && cents < 20) {
-                    return teens[cents - 10];
-                } else {
-                    let centsWord = tens[Math.floor(cents / 10)];
-                    if (cents % 10 > 0) {
-                        centsWord += ' ' + units[cents % 10];
-                    }
-                    return centsWord + ' Cents';
-                }
-            }
-
-            /**
-             * Adds a conversion to the history and updates the display.
-             * @param {string} numberInputVal - The numerical input string.
-             * @param {string} wordsOutputVal - The word representation string.
-             */
             function addConversionToHistory(numberInputVal, wordsOutputVal) {
-                // Add to the beginning of the array
-                conversionHistory.unshift({
-                    number: numberInputVal,
-                    words: wordsOutputVal
-                });
-
-                // Keep only the last MAX_HISTORY_ITEMS
-                if (conversionHistory.length > MAX_HISTORY_ITEMS) {
-                    conversionHistory = conversionHistory.slice(0, MAX_HISTORY_ITEMS);
+                if (!numberInputVal) return;
+                if (conversionHistory.length > 0 && conversionHistory[0].number === numberInputVal) {
+                    return;
                 }
-
+                conversionHistory.unshift({ number: numberInputVal, words: wordsOutputVal });
+                if (conversionHistory.length > MAX_HISTORY_ITEMS) {
+                    conversionHistory.pop();
+                }
                 renderHistory();
             }
 
-            /**
-             * Renders the conversion history in the UI.
-             */
             function renderHistory() {
-                historyList.innerHTML = ''; // Clear existing history
-
+                historyList.innerHTML = '';
                 if (conversionHistory.length === 0) {
                     historyList.innerHTML = '<li class="text-gray-500 text-center py-4">No conversions yet.</li>';
                     return;
                 }
-
                 conversionHistory.forEach(item => {
                     const listItem = document.createElement('li');
                     listItem.className = 'history-item';
@@ -275,102 +239,84 @@
                 });
             }
 
-            /**
-             * Main function to handle input and update output.
-             */
             function updateWords() {
                 let inputValue = numberInput.value.trim();
                 if (inputValue === '') {
                     wordsOutput.textContent = 'Enter a number to see its word representation.';
                     return;
                 }
-
-                // Use parseFloat to handle decimal numbers
                 let number = parseFloat(inputValue);
-
-                // Check for valid number and reasonable range
                 if (isNaN(number)) {
                     wordsOutput.textContent = 'Invalid input. Please enter a valid number.';
                     return;
                 }
-
-                // Limit to a reasonable range for checks (e.g., up to trillions)
-                if (number > 999999999999999.99) { // Roughly less than a quadrillion
-                    wordsOutput.textContent = 'Number is too large for conversion. Please enter a smaller amount.';
+                if (number > 999999999999999.99) {
+                    wordsOutput.textContent = 'Number is too large. Please enter a smaller amount.';
                     return;
                 }
                 if (number < 0) {
-                    wordsOutput.textContent = 'Negative numbers are not typically used on checks. Please enter a positive amount.';
+                    wordsOutput.textContent = 'Negative numbers are not allowed. Please enter a positive amount.';
                     return;
                 }
-
                 const integerPart = Math.floor(number);
-                // Extract cents and handle floating point precision issues
                 const centsPart = Math.round((number - integerPart) * 100);
-
+                
                 let result = '';
                 if (integerPart === 0 && centsPart === 0) {
-                    result = 'Zero Dollars and Zero Cents';
+                    result = 'Zero and 0/100';
                 } else {
                     let dollarsInWords = convertNumberToWords(integerPart);
-                    let centsInWords = convertCentsToWords(centsPart);
-
-                    result = dollarsInWords + ' Dollars and ' + centsInWords;
+                    result = dollarsInWords + ' and ' + centsPart + '/100';
                 }
-
-                // Add "Only" at the end for check writing convention
-                const finalResult = result + ' Only.';
-                wordsOutput.textContent = finalResult;
-
-                // Removed: addConversionToHistory(inputValue, finalResult);
-                // Now, history is updated only on copy button click.
+                
+                wordsOutput.textContent = result;
             }
 
-            // Event listener for input changes
             numberInput.addEventListener('input', updateWords);
+            
+            numberInput.addEventListener('blur', () => {
+                const inputValue = numberInput.value.trim();
+                const outputText = wordsOutput.textContent;
+                if (inputValue && !outputText.includes('Invalid') && !outputText.includes('large') && !outputText.includes('Negative')) {
+                    addConversionToHistory(inputValue, outputText);
+                }
+            });
+            
+            resetButton.addEventListener('click', () => {
+                numberInput.value = '';
+                wordsOutput.textContent = 'Enter a number to see its word representation.';
+                numberInput.focus();
+            });
 
-            // Event listener for copy button
-            copyButton.addEventListener('click', () => {
+            saveButton.addEventListener('click', () => {
                 const textToCopy = wordsOutput.textContent;
-                const inputValue = numberInput.value.trim(); // Get current input value
-
-                if (textToCopy && textToCopy !== 'Enter a number to see its word representation.' && !textToCopy.includes('Invalid input')) {
-                    // Use document.execCommand('copy') for better iframe compatibility
+                if (textToCopy && !textToCopy.includes('Enter a number') && !textToCopy.includes('Invalid')) {
                     const tempTextArea = document.createElement('textarea');
                     tempTextArea.value = textToCopy;
                     document.body.appendChild(tempTextArea);
                     tempTextArea.select();
                     try {
                         document.execCommand('copy');
-                        // Add to history ONLY if copy is successful and input is valid
-                        if (inputValue !== '' && !isNaN(parseFloat(inputValue)) && parseFloat(inputValue) >= 0 && parseFloat(inputValue) <= 999999999999999.99) {
-                             addConversionToHistory(inputValue, textToCopy);
-                        }
-
-                        // Optional: Provide visual feedback to the user
-                        const originalButtonText = copyButton.textContent;
-                        copyButton.textContent = 'Copied!';
+                        const originalButtonText = saveButton.textContent;
+                        saveButton.textContent = 'Saved!';
                         setTimeout(() => {
-                            copyButton.textContent = originalButtonText;
+                            saveButton.textContent = originalButtonText;
                         }, 1500);
                     } catch (err) {
                         console.error('Failed to copy text: ', err);
-                        // Fallback for browsers that don't support execCommand or when it fails
-                        alert('Copying failed. Please manually select and copy the text.');
+                        alert('Saving to clipboard failed. Please manually select and copy the text.');
                     } finally {
                         document.body.removeChild(tempTextArea);
                     }
                 } else {
-                    // Alert the user if there's nothing valid to copy
-                    const originalButtonText = copyButton.textContent;
-                    copyButton.textContent = 'Nothing to copy!';
+                    const originalButtonText = saveButton.textContent;
+                    saveButton.textContent = 'Nothing to save!';
                     setTimeout(() => {
-                        copyButton.textContent = originalButtonText;
+                        saveButton.textContent = originalButtonText;
                     }, 1500);
                 }
             });
 
-            // Initial render of history on load (will show "No conversions yet.")
             renderHistory();
         });
     </script>
