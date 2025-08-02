@@ -68,60 +68,79 @@
             transform: translateY(0); /* Press down effect */
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        /* Main action button style */
         #saveButton {
-            background-color: #3b82f6; /* Blue button */
+            background-color: #3b82f6;
             color: white;
             padding: 12px 24px;
         }
         #saveButton:hover {
-            background-color: #2563eb; /* Darker blue on hover */
+            background-color: #2563eb;
         }
-        /* MODIFIED: Style for the Reset button (gray color) */
         #resetButton {
-            background-color: #64748b; /* slate-500 */
+            background-color: #64748b;
             color: white;
-            padding: 12px 16px; /* Match height of input */
-            flex-shrink: 0; /* Prevent button from shrinking */
-        }
-        #resetButton:hover {
-            background-color: #475569; /* slate-600 */
-        }
-        .history-list {
-            list-style: none;
-            padding: 0;
-            margin-top: 16px;
-        }
-        .history-item {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 10px 16px;
-            margin-bottom: 8px;
-            font-size: 0.95rem;
-            color: #4a5568;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            word-wrap: break-word;
-            line-height: 1.4;
-        }
-        .history-item .amount-num {
-            font-weight: 600;
-            color: #2d3748;
-            margin-right: 10px;
+            padding: 12px 16px;
             flex-shrink: 0;
         }
-        .history-item .amount-words {
-            flex-grow: 1;
+        #resetButton:hover {
+            background-color: #475569;
         }
+        /* NEW: Styles for the "Keep Awake" toggle switch */
+        .wake-lock-toggle {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            gap: 0.75rem; /* 12px */
+        }
+        .wake-lock-toggle .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .wake-lock-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .wake-lock-toggle .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .wake-lock-toggle .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        .wake-lock-toggle input:checked + .slider {
+            background-color: #3b82f6;
+        }
+        .wake-lock-toggle input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        .history-list { list-style: none; padding: 0; margin-top: 16px; }
+        .history-item { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 16px; margin-bottom: 8px; font-size: 0.95rem; color: #4a5568; display: flex; justify-content: space-between; align-items: center; word-wrap: break-word; line-height: 1.4; }
+        .history-item .amount-num { font-weight: 600; color: #2d3748; margin-right: 10px; flex-shrink: 0; }
+        .history-item .amount-words { flex-grow: 1; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-8">Number to Words for Checks</h1>
 
-        <!-- MODIFIED: Input section with reset button moved -->
         <div class="mb-6">
             <label for="numberInput" class="block text-gray-700 text-lg font-medium mb-2">Enter Amount:</label>
             <div class="flex items-center gap-2">
@@ -137,9 +156,19 @@
             </div>
         </div>
 
-        <!-- MODIFIED: "Save" button is now centered alone -->
-        <div class="flex justify-center mb-8">
+        <div class="flex justify-center mb-6">
             <button id="saveButton" class="w-full sm:w-auto">Save</button>
+        </div>
+
+        <!-- NEW: Keep Awake toggle switch section -->
+        <div id="wakeLockContainer" class="flex justify-center items-center mb-8" style="display: none;">
+            <label for="wakeLockCheckbox" class="wake-lock-toggle">
+                <span class="text-gray-700 font-medium">Keep Awake</span>
+                <div class="toggle-switch">
+                    <input type="checkbox" id="wakeLockCheckbox">
+                    <span class="slider"></span>
+                </div>
+            </label>
         </div>
 
         <!-- History Section -->
@@ -159,6 +188,11 @@
             const resetButton = document.getElementById('resetButton');
             const historyList = document.getElementById('historyList');
 
+            // NEW: Elements for Wake Lock feature
+            const wakeLockContainer = document.getElementById('wakeLockContainer');
+            const wakeLockCheckbox = document.getElementById('wakeLockCheckbox');
+            let wakeLock = null;
+
             let conversionHistory = [];
             const MAX_HISTORY_ITEMS = 5;
 
@@ -167,156 +201,67 @@
             const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
             const scales = ['', 'Thousand', 'Million', 'Billion', 'Trillion'];
 
-            function convertLessThanOneThousand(num) {
-                let word = '';
-                if (num === 0) return '';
-                if (Math.floor(num / 100) > 0) {
-                    word += units[Math.floor(num / 100)] + ' Hundred';
-                    num %= 100;
-                    if (num > 0) word += ' ';
+            // ... (conversion functions remain the same) ...
+            function convertLessThanOneThousand(num) { let word = ''; if (num === 0) return ''; if (Math.floor(num / 100) > 0) { word += units[Math.floor(num / 100)] + ' Hundred'; num %= 100; if (num > 0) word += ' '; } if (num > 0) { if (num < 10) { word += units[num]; } else if (num >= 10 && num < 20) { word += teens[num - 10]; } else { word += tens[Math.floor(num / 10)]; if (num % 10 > 0) { word += ' ' + units[num % 10]; } } } return word.trim(); }
+            function convertNumberToWords(num) { if (num === 0) return 'Zero'; if (num < 0) return 'Negative ' + convertNumberToWords(Math.abs(num)); let words = []; let i = 0; while (num > 0) { const chunk = num % 1000; if (chunk > 0) { let chunkWords = convertLessThanOneThousand(chunk); if (scales[i]) { chunkWords += ' ' + scales[i]; } words.unshift(chunkWords.trim()); } num = Math.floor(num / 1000); i++; } return words.join(' ').trim(); }
+            function addConversionToHistory(numberInputVal, wordsOutputVal) { if (!numberInputVal) return; if (conversionHistory.length > 0 && conversionHistory[0].number === numberInputVal) { return; } conversionHistory.unshift({ number: numberInputVal, words: wordsOutputVal }); if (conversionHistory.length > MAX_HISTORY_ITEMS) { conversionHistory.pop(); } renderHistory(); }
+            function renderHistory() { historyList.innerHTML = ''; if (conversionHistory.length === 0) { historyList.innerHTML = '<li class="text-gray-500 text-center py-4">No conversions yet.</li>'; return; } conversionHistory.forEach(item => { const listItem = document.createElement('li'); listItem.className = 'history-item'; listItem.innerHTML = `<span class="amount-num">$${item.number}</span><span class="amount-words">${item.words}</span>`; historyList.appendChild(listItem); }); }
+            function updateWords() { let inputValue = numberInput.value.trim(); if (inputValue === '') { wordsOutput.textContent = 'Enter a number to see its word representation.'; return; } let number = parseFloat(inputValue); if (isNaN(number)) { wordsOutput.textContent = 'Invalid input. Please enter a valid number.'; return; } if (number > 999999999999999.99) { wordsOutput.textContent = 'Number is too large. Please enter a smaller amount.'; return; } if (number < 0) { wordsOutput.textContent = 'Negative numbers are not allowed. Please enter a positive amount.'; return; } const integerPart = Math.floor(number); const centsPart = Math.round((number - integerPart) * 100); let result = ''; if (integerPart === 0 && centsPart === 0) { result = 'Zero and 0/100'; } else { let dollarsInWords = convertNumberToWords(integerPart); result = dollarsInWords + ' and ' + centsPart + '/100'; } wordsOutput.textContent = result; }
+
+            // --- Event Listeners ---
+            numberInput.addEventListener('input', updateWords);
+            numberInput.addEventListener('blur', () => { const inputValue = numberInput.value.trim(); const outputText = wordsOutput.textContent; if (inputValue && !outputText.includes('Invalid') && !outputText.includes('large') && !outputText.includes('Negative')) { addConversionToHistory(inputValue, outputText); } });
+            resetButton.addEventListener('click', () => { numberInput.value = ''; wordsOutput.textContent = 'Enter a number to see its word representation.'; numberInput.focus(); });
+            saveButton.addEventListener('click', () => { const textToCopy = wordsOutput.textContent; if (textToCopy && !textToCopy.includes('Enter a number') && !textToCopy.includes('Invalid')) { const tempTextArea = document.createElement('textarea'); tempTextArea.value = textToCopy; document.body.appendChild(tempTextArea); tempTextArea.select(); try { document.execCommand('copy'); const originalButtonText = saveButton.textContent; saveButton.textContent = 'Saved!'; setTimeout(() => { saveButton.textContent = originalButtonText; }, 1500); } catch (err) { console.error('Failed to copy text: ', err); alert('Saving to clipboard failed. Please manually select and copy the text.'); } finally { document.body.removeChild(tempTextArea); } } else { const originalButtonText = saveButton.textContent; saveButton.textContent = 'Nothing to save!'; setTimeout(() => { saveButton.textContent = originalButtonText; }, 1500); } });
+
+            // --- NEW: WAKE LOCK LOGIC ---
+            
+            // Function to request the wake lock
+            const requestWakeLock = async () => {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    wakeLock.addEventListener('release', () => {
+                        // This happens if the lock is released by the browser
+                        console.log('Wake Lock was released.');
+                        wakeLockCheckbox.checked = false;
+                        wakeLock = null;
+                    });
+                    console.log('Wake Lock is active.');
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
+                    wakeLockCheckbox.checked = false; // Uncheck if request fails
                 }
-                if (num > 0) {
-                    if (num < 10) {
-                        word += units[num];
-                    } else if (num >= 10 && num < 20) {
-                        word += teens[num - 10];
+            };
+
+            // Function to release the wake lock
+            const releaseWakeLock = () => {
+                if (wakeLock) {
+                    wakeLock.release();
+                    wakeLock = null;
+                }
+            };
+            
+            // Show the toggle switch only if the Wake Lock API is supported
+            if ('wakeLock' in navigator) {
+                wakeLockContainer.style.display = 'flex';
+
+                wakeLockCheckbox.addEventListener('change', () => {
+                    if (wakeLockCheckbox.checked) {
+                        requestWakeLock();
                     } else {
-                        word += tens[Math.floor(num / 10)];
-                        if (num % 10 > 0) {
-                            word += ' ' + units[num % 10];
-                        }
+                        releaseWakeLock();
                     }
-                }
-                return word.trim();
-            }
+                });
 
-            function convertNumberToWords(num) {
-                if (num === 0) return 'Zero';
-                if (num < 0) return 'Negative ' + convertNumberToWords(Math.abs(num));
-                let words = [];
-                let i = 0;
-                while (num > 0) {
-                    const chunk = num % 1000;
-                    if (chunk > 0) {
-                        let chunkWords = convertLessThanOneThousand(chunk);
-                        if (scales[i]) {
-                            chunkWords += ' ' + scales[i];
-                        }
-                        words.unshift(chunkWords.trim());
+                // Re-acquire the lock if the page becomes visible again
+                document.addEventListener('visibilitychange', async () => {
+                    if (wakeLock !== null && document.visibilityState === 'visible') {
+                        await requestWakeLock();
                     }
-                    num = Math.floor(num / 1000);
-                    i++;
-                }
-                return words.join(' ').trim();
-            }
-
-            function addConversionToHistory(numberInputVal, wordsOutputVal) {
-                if (!numberInputVal) return;
-                if (conversionHistory.length > 0 && conversionHistory[0].number === numberInputVal) {
-                    return;
-                }
-                conversionHistory.unshift({ number: numberInputVal, words: wordsOutputVal });
-                if (conversionHistory.length > MAX_HISTORY_ITEMS) {
-                    conversionHistory.pop();
-                }
-                renderHistory();
-            }
-
-            function renderHistory() {
-                historyList.innerHTML = '';
-                if (conversionHistory.length === 0) {
-                    historyList.innerHTML = '<li class="text-gray-500 text-center py-4">No conversions yet.</li>';
-                    return;
-                }
-                conversionHistory.forEach(item => {
-                    const listItem = document.createElement('li');
-                    listItem.className = 'history-item';
-                    listItem.innerHTML = `
-                        <span class="amount-num">$${item.number}</span>
-                        <span class="amount-words">${item.words}</span>
-                    `;
-                    historyList.appendChild(listItem);
                 });
             }
 
-            function updateWords() {
-                let inputValue = numberInput.value.trim();
-                if (inputValue === '') {
-                    wordsOutput.textContent = 'Enter a number to see its word representation.';
-                    return;
-                }
-                let number = parseFloat(inputValue);
-                if (isNaN(number)) {
-                    wordsOutput.textContent = 'Invalid input. Please enter a valid number.';
-                    return;
-                }
-                if (number > 999999999999999.99) {
-                    wordsOutput.textContent = 'Number is too large. Please enter a smaller amount.';
-                    return;
-                }
-                if (number < 0) {
-                    wordsOutput.textContent = 'Negative numbers are not allowed. Please enter a positive amount.';
-                    return;
-                }
-                const integerPart = Math.floor(number);
-                const centsPart = Math.round((number - integerPart) * 100);
-                
-                let result = '';
-                if (integerPart === 0 && centsPart === 0) {
-                    result = 'Zero and 0/100';
-                } else {
-                    let dollarsInWords = convertNumberToWords(integerPart);
-                    result = dollarsInWords + ' and ' + centsPart + '/100';
-                }
-                
-                wordsOutput.textContent = result;
-            }
-
-            numberInput.addEventListener('input', updateWords);
-            
-            numberInput.addEventListener('blur', () => {
-                const inputValue = numberInput.value.trim();
-                const outputText = wordsOutput.textContent;
-                if (inputValue && !outputText.includes('Invalid') && !outputText.includes('large') && !outputText.includes('Negative')) {
-                    addConversionToHistory(inputValue, outputText);
-                }
-            });
-            
-            resetButton.addEventListener('click', () => {
-                numberInput.value = '';
-                wordsOutput.textContent = 'Enter a number to see its word representation.';
-                numberInput.focus();
-            });
-
-            saveButton.addEventListener('click', () => {
-                const textToCopy = wordsOutput.textContent;
-                if (textToCopy && !textToCopy.includes('Enter a number') && !textToCopy.includes('Invalid')) {
-                    const tempTextArea = document.createElement('textarea');
-                    tempTextArea.value = textToCopy;
-                    document.body.appendChild(tempTextArea);
-                    tempTextArea.select();
-                    try {
-                        document.execCommand('copy');
-                        const originalButtonText = saveButton.textContent;
-                        saveButton.textContent = 'Saved!';
-                        setTimeout(() => {
-                            saveButton.textContent = originalButtonText;
-                        }, 1500);
-                    } catch (err) {
-                        console.error('Failed to copy text: ', err);
-                        alert('Saving to clipboard failed. Please manually select and copy the text.');
-                    } finally {
-                        document.body.removeChild(tempTextArea);
-                    }
-                } else {
-                    const originalButtonText = saveButton.textContent;
-                    saveButton.textContent = 'Nothing to save!';
-                    setTimeout(() => {
-                        saveButton.textContent = originalButtonText;
-                    }, 1500);
-                }
-            });
-
+            // Initial setup
             renderHistory();
         });
     </script>
